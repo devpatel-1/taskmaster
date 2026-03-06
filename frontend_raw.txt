@@ -1,0 +1,202 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskMaster</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #f1f1f1;
+            --text-color: #333;
+            --error-color: #f44336;
+            --loading-color: #ff9800;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--secondary-color);
+        }
+        h1 {
+            color: var(--primary-color);
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input[type="text"], input[type="password"], textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            opacity: 0.8;
+        }
+        .error {
+            color: var(--error-color);
+        }
+        .loading {
+            color: var(--loading-color);
+        }
+        .task {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>TaskMaster</h1>
+    <div id="app"></div>
+
+    <script>
+        const app = document.getElementById('app');
+
+        async function fetchAPI(url, options) {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'An error occurred');
+            }
+            return response.json();
+        }
+
+        function showLoading() {
+            app.innerHTML = '<div class="loading">Loading...</div>';
+        }
+
+        function showError(message) {
+            app.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        function renderLoginForm() {
+            app.innerHTML = `
+                <form id="loginForm">
+                    <input type="text" id="username" placeholder="Username" required>
+                    <input type="password" id="password" placeholder="Password" required>
+                    <button type="submit">Login</button>
+                </form>
+                <button id="showRegister">Register</button>
+            `;
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('showRegister').addEventListener('click', renderRegisterForm);
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            showLoading();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            try {
+                await fetchAPI('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                renderTaskManagement();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function renderRegisterForm() {
+            app.innerHTML = `
+                <form id="registerForm">
+                    <input type="text" id="regUsername" placeholder="Username" required>
+                    <input type="password" id="regPassword" placeholder="Password" required>
+                    <button type="submit">Register</button>
+                </form>
+                <button id="showLogin">Back to Login</button>
+            `;
+            document.getElementById('registerForm').addEventListener('submit', handleRegister);
+            document.getElementById('showLogin').addEventListener('click', renderLoginForm);
+        }
+
+        async function handleRegister(event) {
+            event.preventDefault();
+            showLoading();
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+            try {
+                await fetchAPI('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                renderLoginForm();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function renderTaskManagement() {
+            showLoading();
+            try {
+                const tasks = await fetchAPI('/api/tasks');
+                app.innerHTML = `
+                    <h2>Task Management</h2>
+                    <div id="taskList">${tasks.map(task => `
+                        <div class="task">
+                            <h3>${task.title}</h3>
+                            <p>${task.description}</p>
+                            <button onclick="deleteTask(${task.id})">Delete</button>
+                        </div>
+                    `).join('')}</div>
+                    <form id="taskForm">
+                        <input type="text" id="taskTitle" placeholder="Task Title" required>
+                        <textarea id="taskDescription" placeholder="Task Description"></textarea>
+                        <button type="submit">Add Task</button>
+                    </form>
+                `;
+                document.getElementById('taskForm').addEventListener('submit', handleCreateTask);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function handleCreateTask(event) {
+            event.preventDefault();
+            showLoading();
+            const title = document.getElementById('taskTitle').value;
+            const description = document.getElementById('taskDescription').value;
+            try {
+                await fetchAPI('/api/tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, description })
+                });
+                renderTaskManagement();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function deleteTask(taskId) {
+            showLoading();
+            try {
+                await fetchAPI(`/api/tasks/${taskId}`, {
+                    method: 'DELETE'
+                });
+                renderTaskManagement();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        renderLoginForm();
+    </script>
+</body>
+</html>
+```
